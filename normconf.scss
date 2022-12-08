@@ -1,0 +1,31 @@
+/*-- scss:defaults --*/
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
+
+$font-family-sans-serif: 'Montserrat', sans-serif;
+$presentation-heading-font: 'Montserrat', sans-serif;
+
+$theme-pink: #FF29BF;
+$theme-blue: #4200BF;
+$theme-aqua: #5EFFCF;
+$theme-purple: #6017AF;
+
+$link-color: $theme-purple;
+$presentation-heading-color: $theme-blue;
+$code-block-border-color: lighten($theme-blue, 60%);
+
+/*-- scss:rules --*/
+
+.pink {
+  color: $theme-pink;
+  font-weight: bold;
+}
+
+.purple {
+  color: $theme-purple;
+  font-weight: bold;
+}
+
+.aqua {
+  color: $theme-aqua;
+  font-weight: bold;
+}

@@ -1,0 +1,383 @@
+---
+title: ""
+author: ""
+format:
+  revealjs: 
+    footer: <https://juliasilge.github.io/normconf-simulation/>
+    theme: [simple, normconf.scss]
+    width: 1280
+    height: 720
+knitr:
+  opts_chunk: 
+    echo: true
+    collapse: true
+    comment: "#>"
+---
+
+## {background-image="images/normconf-title-slide.png" background-size="contain"}
+
+::: footer
+ 
+:::
+
+## {background-image="images/normconf-title.jpg"}
+
+```{r}
+#| echo: false
+library(ggplot2)
+theme_set(silgelib::theme_light_plex())
+update_geom_defaults("rect", list(fill = "#4200BF", alpha = 0.8))
+update_geom_defaults("line", list(color = "#4200BF", alpha = 0.8))
+update_geom_defaults("point", list(color = "#4200BF", size = 3, alpha = 0.7))
+```
+
+<center>
+
+<img src="https://github.com/juliasilge.png" style="border-radius: 50%;" width="250px"/>
+
+[{{< fa brands github >}} \@juliasilge](https://github.com/juliasilge)
+
+[{{< fa brands mastodon >}} \@juliasilge](https://fosstodon.org/@juliasilge)
+
+[{{< fa brands youtube >}} youtube.com/juliasilge](https://www.youtube.com/juliasilge)
+
+[{{< fa link >}} juliasilge.com](https://juliasilge.com/)
+
+</center>
+
+##  {background-image="images/normconf-blobby.jpg"}
+
+{{< tweet vboykis 1552066833582276610 >}}
+
+# Simulation is a powerful tool to...
+
+::: incremental
+-   make assumptions [concrete]{.pink}
+-   get on the same page with colleagues about [tradeoffs]{.pink}
+-   ultimately make [better decisions]{.pink} for our everyday data science tasks
+:::
+
+## 
+
+![](images/tm-org.png){fig-align="center"}
+
+::: footer
+<https://www.tidymodels.org/>
+:::
+
+## How many folds is too many? {auto-animate="true"}
+
+```{r}
+library(tidymodels)
+
+sim_df <- sim_regression(num_samples = 1e3)
+```
+
+## How many folds is too many? {auto-animate="true"}
+
+```{r}
+library(tidymodels)
+
+sim_df <- sim_regression(num_samples = 1e3)
+glimpse(sim_df)
+```
+
+## How many folds is too many?
+
+```{r}
+#| eval: false
+predictor_01 + sin(predictor_02) + log(abs(predictor_03)) +
+  predictor_04^2 + predictor_05 * predictor_06 +
+  ifelse(predictor_07 * predictor_08 * predictor_09 < 0, 1, 0) +
+  ifelse(predictor_10 > 0, 1, 0) + predictor_11 * ifelse(predictor_11 > 0, 1, 0) +
+  sqrt(abs(predictor_12)) + cos(predictor_13) + 2 * predictor_14 + abs(predictor_15) +
+  ifelse(predictor_16 < -1, 1, 0) + predictor_17 * ifelse(predictor_17 < -1, 1, 0) -
+  2 * predictor_18 - predictor_19 * predictor_20
+```
+
+This function uses 20 independent Gaussian random predictors.
+
+## How many folds is too many?
+
+```{r}
+folds <- vfold_cv(sim_df, strata = outcome)
+folds
+```
+
+## How many folds is too many? {auto-animate="true"}
+
+```{r}
+doParallel::registerDoParallel()
+
+workflow(
+  outcome ~ ., 
+  rand_forest(mode = "regression", trees = 1e3)
+) %>%
+  fit_resamples(folds) %>%
+  collect_metrics()
+```
+
+## How many folds is too many? {auto-animate="true"}
+
+```{r}
+#| code-line-numbers: "|2|3|8|9|12"
+collect_simulated_metrics <- function(num_samples, v) {
+  sim_df <- sim_regression(num_samples = num_samples)
+  folds <- vfold_cv(sim_df, v = v, strata = outcome)
+  workflow(
+    outcome ~ ., 
+    rand_forest(mode = "regression", trees = 1e3)
+  ) %>%
+    fit_resamples(folds) %>%
+    collect_metrics()
+}
+
+collect_simulated_metrics(num_samples = 1e3, v = 3)
+```
+
+## How many folds is too many? {auto-animate="true"}
+
+```{r}
+#| code-line-numbers: "|2|3"
+metrics_sim <-
+  tibble(v = rep(seq(4, 24, by = 2), 100)) %>%
+  mutate(metrics = map(v, collect_simulated_metrics, num_samples = 1e3)) %>%
+  unnest(metrics)
+
+metrics_sim
+```
+
+## How many folds is too many?
+
+```{r}
+#| output-location: slide
+#| fig-align: center
+#| fig-width: 6
+#| fig-height: 5
+#| code-line-numbers: "|2|4"
+metrics_sim %>%
+  filter(.metric == "rmse") %>%
+  group_by(v) %>%
+  summarise(variance = median(std_err ^ 2 / n)) %>%
+  ggplot(aes(v, variance)) +
+  geom_point()
+```
+
+# How does bias change with folds? {background-image="images/normconf-plain.jpg"}
+
+Run a simulation 💥
+
+# What if you have more or less data? {background-image="images/normconf-plain.jpg"}
+
+Run a simulation 💃
+
+# What if you are going to use a different model? {background-image="images/normconf-plain.jpg"}
+
+Run a simulation 🕺
+
+# What if you want to do repeated CV? {background-image="images/normconf-plain.jpg"}
+
+Run a simulation 👯
+
+# What if you want to use the bootstrap? {background-image="images/normconf-plain.jpg"}
+
+Run a simulation 💁‍♀️
+
+## How many observations do we need? {auto-animate="true"}
+
+```{r}
+#| eval: false
+predictor_01 + predictor_02
+```
+
+## How many observations do we need? {auto-animate="true"}
+
+```{r}
+#| eval: false
+predictor_01 + predictor_02 + predictor_01 * predictor_02
+```
+
+## How many observations do we need? {auto-animate="true"}
+
+```{r}
+#| eval: false
+predictor_01 + predictor_02 + effect_size * predictor_01 * predictor_02
+```
+
+## How many observations do we need? {auto-animate="true"}
+
+```{r}
+#| code-line-numbers: "|6"
+simulate_interaction <- function(num_samples, effect_size) {
+  dat <- matrix(rnorm(num_samples * 2, sd = 2), ncol = 2)
+  colnames(dat) <- paste0("predictor_0", 1:2)
+  tibble::as_tibble(dat) %>%
+    mutate(
+      outcome = predictor_01 + predictor_02 + effect_size * predictor_01 * predictor_02,
+      outcome = outcome + rnorm(num_samples, sd = 2)
+    ) %>%
+    relocate(outcome)
+}
+
+simulate_interaction(100, 0.1)
+```
+
+## How many observations do we need? {auto-animate="true"}
+
+```{r}
+#| code-line-numbers: "|10"
+df_sim <- simulate_interaction(100, 0.1)
+lm_fitted <- lm(outcome ~ predictor_01 * predictor_02, data = df_sim)
+tidy(lm_fitted)
+```
+
+## How many observations do we need? {auto-animate="true"}
+
+```{r}
+simulate_power <- function(num_samples, effect_size) {
+  df_sim <- simulate_interaction(num_samples, effect_size)
+  lm_fitted <- lm(outcome ~ predictor_01 * predictor_02, data = df_sim)
+  tidy(lm_fitted) %>% 
+    filter(term == "predictor_01:predictor_02") %>% 
+    summarize(sig = p.value < 0.05) %>% 
+    pull(sig)
+}
+
+rerun(100, simulate_power(100, 0.1)) %>%
+  flatten_lgl() %>%
+  mean()
+```
+
+## How many observations do we need? {auto-animate="true"}
+
+```{r}
+#| code-line-numbers: "|3-4|8-10"
+power_sim_results <-
+  crossing(
+    num_samples = seq(100, 900, by = 200),
+    effect_size = seq(-0.08, 0.08, by = 0.01)
+  ) %>%
+  mutate(power = map2_dbl(
+    num_samples, effect_size,
+    ~ rerun(1e3, simulate_power(.x, .y)) %>%
+      flatten_lgl() %>%
+      mean())
+  )
+
+power_sim_results
+```
+
+## How many observations do we need?
+
+```{r}
+#| output-location: slide
+#| fig-align: center
+#| fig-width: 9
+#| fig-height: 5
+power_sim_results  %>%
+  ggplot(aes(effect_size, power, group = num_samples, color = num_samples)) +
+  geom_hline(yintercept = 0.8, linetype = "dashed", alpha = 0.5) +
+  geom_line(linewidth = 1.5, alpha = 0.7) +
+  scale_color_viridis_c() +
+  scale_y_continuous(labels = scales::percent)
+```
+
+
+## How important is this relationship? {auto-animate="true"}
+
+The [nullabor](http://dicook.github.io/nullabor/) package provides tools for graphical inference.
+
+. . .
+
+```{r}
+#| code-line-numbers: "|8"
+library(nullabor)
+
+simulate_viz_inference <- function(num_samples) {
+  dat <- matrix(rnorm(num_samples * 2), ncol = 2)
+  colnames(dat) <- paste0("predictor_0", 1:2)
+  tibble::as_tibble(dat) %>%
+    mutate(
+      outcome = predictor_01 + log(abs(predictor_02)),
+      outcome = outcome + rnorm(num_samples)
+    ) %>%
+    relocate(outcome)
+}
+
+simulate_viz_inference(100)
+```
+
+
+## How important is this relationship? {auto-animate="true"}
+
+```{r}
+#| fig-align: center
+#| fig-width: 6
+#| fig-height: 5
+simulate_viz_inference(200) %>%
+  ggplot(aes(predictor_01, outcome)) +
+  geom_point(alpha = 0.4) 
+```
+
+## How important is this relationship? {auto-animate="true"}
+
+```{r}
+#| fig-align: center
+#| fig-width: 6
+#| fig-height: 5
+simulate_viz_inference(200) %>%
+  ggplot(aes(predictor_02, outcome)) +
+  geom_point(alpha = 0.4) 
+```
+
+## How important is this relationship? {auto-animate="true"}
+
+```{r}
+#| output-location: slide
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 6.5
+permuted <- lineup(null_permute("outcome"), simulate_viz_inference(200))
+
+permuted %>%
+  ggplot(aes(predictor_01, outcome)) +
+  geom_point(alpha = 0.2) + 
+  facet_wrap(~ .sample)
+```
+
+## How important is this relationship? {auto-animate="true"}
+
+```{r}
+#| output-location: slide
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 6.5
+permuted <- lineup(null_permute("outcome"), simulate_viz_inference(200))
+
+permuted %>%
+  ggplot(aes(predictor_02, outcome)) +
+  geom_point(alpha = 0.2) + 
+  facet_wrap(~ .sample)
+```
+
+# Simulation is a powerful tool to...
+
+-   make assumptions [concrete]{.pink}
+-   get on the same page with colleagues about [tradeoffs]{.pink}
+-   ultimately make [better decisions]{.pink} for our everyday data science 
+
+# {background-image="images/normconf-title.jpg"}
+
+<center>
+
+<img src="https://github.com/juliasilge.png" style="border-radius: 50%;" width="250px"/>
+
+[{{< fa brands github >}} \@juliasilge](https://github.com/juliasilge)
+
+[{{< fa brands mastodon >}} \@juliasilge](https://fosstodon.org/@juliasilge)
+
+[{{< fa brands youtube >}} youtube.com/juliasilge](https://www.youtube.com/juliasilge)
+
+[{{< fa link >}} juliasilge.com](https://juliasilge.com/)
+
+</center>
